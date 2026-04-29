@@ -1,0 +1,67 @@
+"""Pipeline de streaming — consumer → stream → sink.
+
+Flujo:
+  1. Consumer lee eventos de Kafka
+  2. Stream los filtra y transforma
+  3. Sink los persiste en storage
+"""
+from __future__ import annotations
+
+import signal
+import sys
+
+from dotenv import load_dotenv
+from rich.console import Console
+
+from {{ package_name }}.consumers import BaseKafkaConsumer
+from {{ package_name }}.sinks.base import Sink
+
+load_dotenv()
+console = Console()
+
+_running = True
+
+
+def _handle_signal(sig, frame) -> None:
+    global _running
+    console.print("\n  [yellow]Señal recibida — cerrando limpiamente...[/yellow]")
+    _running = False
+
+
+def _identity_stream(event):
+    """Stream de identidad — pasá tus transformaciones aquí."""
+    yield event
+
+
+def run() -> None:
+    signal.signal(signal.SIGINT,  _handle_signal)
+    signal.signal(signal.SIGTERM, _handle_signal)
+
+    console.rule("[bold cyan]{{ package_name }} · streaming pipeline[/bold cyan]")
+
+    consumer = BaseKafkaConsumer()
+
+    # Implementá tu sink aquí (Postgres, Delta Lake, archivo...)
+    # Ejemplo: from {{ package_name }}.sinks.postgres_sink import PostgresSink
+    # sink = PostgresSink()
+
+    processed = 0
+    try:
+        for event in consumer:
+            if not _running:
+                break
+
+            for result in _identity_stream(event):
+                # sink.write(result)
+                console.print(f"  [dim]evento:[/dim] {result}")
+                processed += 1
+
+            consumer.commit()
+
+    finally:
+        consumer.close()
+        console.print(f"\n  [green]✓[/green] {processed} eventos procesados.")
+
+
+if __name__ == "__main__":
+    run()

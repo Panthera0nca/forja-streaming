@@ -1,0 +1,14 @@
+[project]
+name = "{{ project_name }}"
+package = "{{ package_name }}"
+type = "streaming"
+version = "0.1.0"
+forja_version = "{{ forja_version }}"
+category = "{{ category }}"
+sources = []
+pipelines = []
+
+[streaming]
+broker = "localhost:9092"
+topics = ["{{ package_name }}.events"]
+consumer_group = "{{ package_name }}-consumer"
